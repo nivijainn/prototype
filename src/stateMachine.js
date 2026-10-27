@@ -1,0 +1,51 @@
+// Section 4.3 CS-6: State transition guards derived directly from Assignment 5 & Assignment 7
+
+const APPLICATION_TRANSITIONS = {
+  "DRAFT": ["SUBMITTED"],
+  "SUBMITTED": ["UNDER_SCREENING"],
+  "UNDER_SCREENING": ["ELIGIBLE", "NOT_ELIGIBLE", "REVIEW_REQUIRED"],
+  "REVIEW_REQUIRED": ["UNDER_SCREENING"],
+  "ELIGIBLE": ["SHORTLISTED"],
+  "SHORTLISTED": ["REJECTED", "INTERVIEW_SCHEDULED"],
+  "NOT_ELIGIBLE": [],
+  "REJECTED": [],
+  "INTERVIEW_SCHEDULED": ["COMPLETED"]
+};
+
+const INTERVIEW_TRANSITIONS = {
+  "SCHEDULED": ["IN_PROGRESS", "RESCHEDULED", "NOT_ATTENDED"],
+  "RESCHEDULED": ["SCHEDULED"],
+  "IN_PROGRESS": ["EVALUATION_PENDING", "NOT_ATTENDED"],
+  "EVALUATION_PENDING": ["EVALUATED", "EVALUATION_INCOMPLETE"],
+  "EVALUATION_INCOMPLETE": ["EVALUATION_PENDING"],
+  "EVALUATED": ["EVALUATED", "VALIDATED", "EVALUATION_INCOMPLETE"],
+  "VALIDATED": ["COMPLETED"],
+  "COMPLETED": [],
+  "NOT_ATTENDED": []
+};
+
+function isValidApplicationTransition(current, next) {
+  if (!APPLICATION_TRANSITIONS[current]) return false;
+  return APPLICATION_TRANSITIONS[current].includes(next);
+}
+
+function isValidInterviewTransition(current, next) {
+  if (!INTERVIEW_TRANSITIONS[current]) return false;
+  return INTERVIEW_TRANSITIONS[current].includes(next);
+}
+
+const MANDATORY_DOCUMENTS = [
+  "AADHAR_CARD",
+  "MARKSHEET_10",
+  "MASTERS_DEGREE",
+  "EXPERIENCE_CERTIFICATE",
+  "BIRTH_CERTIFICATE"
+];
+
+module.exports = {
+  APPLICATION_TRANSITIONS,
+  INTERVIEW_TRANSITIONS,
+  isValidApplicationTransition,
+  isValidInterviewTransition,
+  MANDATORY_DOCUMENTS
+};

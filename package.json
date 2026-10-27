@@ -1,0 +1,12 @@
+{
+  "name": "lnmiit-faculty-recruitment-workflow",
+  "version": "1.0.0",
+  "description": "LNMIIT CS314 Software Development Laboratory - Faculty Recruitment Workflow Management System Prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["lnmiit", "cs314", "recruitment-system", "software-engineering", "uml"],
+  "author": "Team T076 (Rachit Poddar, Nivi Jain, Maheshwar Pratap Singh, Daivik Patodi)",
+  "license": "ISC"
+}

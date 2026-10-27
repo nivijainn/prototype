@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Recruitment Workflow Management System | LNMIIT CS314 Prototype</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+</head>
+<body>
+
+  <!-- Top Demo Bar for Professor Presentation -->
+  <div class="demo-banner">
+    <div class="demo-banner-left">
+      <span class="badge">PROFESSOR DEMO BAR</span>
+      <span>1-Click Persona Switcher:</span>
+    </div>
+    <div class="demo-persona-list">
+      <button class="persona-btn active" data-persona="applicant" onclick="switchPersona('applicant')">
+        👨‍🎓 Rahul Sharma (Applicant)
+      </button>
+      <button class="persona-btn" data-persona="recruiter" onclick="switchPersona('recruiter')">
+        👩‍💼 Anita Verma (Recruitment Cell)
+      </button>
+      <button class="persona-btn" data-persona="panel1" onclick="switchPersona('panel1')">
+        👨‍🏫 Dr. K. Iyer (Panel 1)
+      </button>
+      <button class="persona-btn" data-persona="panel2" onclick="switchPersona('panel2')">
+        👨‍🏫 Dr. S. Bansal (Panel 2)
+      </button>
+      <button class="persona-btn" data-persona="hod" onclick="switchPersona('hod')">
+        🏛️ Prof. Biswas (HOD)
+      </button>
+      <button class="reset-btn" onclick="resetEntireDemo()" title="Reset all changes back to initial state">
+        🔄 Reset Demo Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Header matching LNMIIT Academic Portal (NFR-008) -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="brand-container" onclick="navigateTo('vacancies')">
+        <div class="brand-logo">LNM</div>
+        <div class="brand-titles">
+          <h1>Faculty Recruitment Workflow Management System</h1>
+          <p>The LNM Institute of Information Technology, Jaipur | CS314 Lab Prototype</p>
+        </div>
+      </div>
+
+      <nav>
+        <ul class="nav-menu" id="main-nav">
+          <!-- Dynamically populated based on active persona -->
+        </ul>
+      </nav>
+
+      <div id="user-pill-container">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main class="container" id="content-area">
+    <!-- Screen content dynamically rendered by app.js -->
+  </main>
+
+  <!-- Footer -->
+  <footer class="main-footer">
+    <p>
+      <strong>CS314 Software Development Laboratory - Lab Assignment Solution Prototype</strong> |
+      Team T076: Rachit Poddar (24UCS176), Nivi Jain (24UCS177), Maheshwar Pratap Singh (24UCS182), Daivik Patodi (24UCS184)
+    </p>
+    <p style="margin-top: 4px; font-size: 0.75rem;">
+      Full compliance with Assignments 1-7 (Use Cases UC-006, UC-007, UC-009/10, Wireframes S-01 to S-11, State Machines CS-1 to CS-6)
+    </p>
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
