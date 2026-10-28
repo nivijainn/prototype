@@ -130,6 +130,24 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, vacancies);
       }
 
+      // 2b. Vacancy: Create / List New (Recruitment Cell)
+      if (pathname === '/api/vacancies' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const authHeader = req.headers['authorization'] || '';
+        let userId = 'U007'; // Anita Verma (Recruitment Cell)
+        if (authHeader.startsWith('Bearer ')) {
+          userId = authHeader.replace('Bearer ', '').trim();
+        }
+        const user = store.findUserById(userId);
+        if (user && user.role !== 'RECRUITMENT_CELL' && user.role !== 'ADMINISTRATOR') {
+          const err = new Error("Access denied. Only Recruitment Cell staff can list new vacancies.");
+          err.status = 403; err.code = "FORBIDDEN";
+          return sendError(res, err, pathname);
+        }
+        const created = store.createVacancy(body, userId);
+        return sendJson(res, 201, created);
+      }
+
       // 3. Vacancy Details (S-03)
       const vacancyMatch = pathname.match(/^\/api\/vacancies\/([A-Za-z0-9-]+)$/);
       if (vacancyMatch && method === 'GET') {

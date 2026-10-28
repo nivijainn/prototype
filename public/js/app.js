@@ -110,6 +110,7 @@ function updateNavMenu() {
     html += `<li><a class="nav-link ${currentScreen === 'my-applications' ? 'active' : ''}" onclick="navigateTo('my-applications')">My Applications</a></li>`;
   } else if (currentUser && currentUser.role === 'RECRUITMENT_CELL') {
     html += `<li><a class="nav-link ${currentScreen === 'rc-dashboard' ? 'active' : ''}" onclick="navigateTo('rc-dashboard')">Dashboard & Applications</a></li>`;
+    html += `<li><a class="nav-link ${currentScreen === 'create-vacancy' ? 'active' : ''}" onclick="navigateTo('create-vacancy')">➕ List New Vacancy</a></li>`;
     html += `<li><a class="nav-link ${currentScreen === 'vacancies' ? 'active' : ''}" onclick="navigateTo('vacancies')">Browse Openings</a></li>`;
   } else if (currentUser && currentUser.role === 'INTERVIEW_PANEL') {
     html += `<li><a class="nav-link ${currentScreen === 'panel-interviews' ? 'active' : ''}" onclick="navigateTo('panel-interviews')">My Assigned Interviews</a></li>`;
@@ -148,6 +149,9 @@ function navigateTo(screen, params = {}) {
       break;
     case 'rc-dashboard':
       renderRCDashboardScreen(params.vacancyId);
+      break;
+    case 'create-vacancy':
+      renderCreateVacancyScreen();
       break;
     case 'screen-application':
       renderScreenApplicationScreen(params.applicationId);
@@ -277,6 +281,11 @@ async function renderVacanciesScreen() {
             <h2 class="card-title">Published Faculty Vacancies</h2>
             <p class="card-subtitle">Openings across academic departments at LNMIIT Jaipur</p>
           </div>
+          ${currentUser && currentUser.role === 'RECRUITMENT_CELL' ? `
+            <button class="btn btn-primary btn-sm" onclick="navigateTo('create-vacancy')">
+              ➕ List New Vacancy
+            </button>
+          ` : ''}
         </div>
 
         <!-- Filter bar (Figure 7.3) -->
@@ -1157,7 +1166,10 @@ async function renderRCDashboardScreen(selectedVacancyId) {
         <!-- Left Sidebar: Vacancies & Summary -->
         <div>
           <div class="card" style="padding: 16px;">
-            <h3 style="font-size:1rem; font-weight:700; color:var(--lnmiit-navy); margin-bottom: 12px;">Vacancies</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+              <h3 style="font-size:1rem; font-weight:700; color:var(--lnmiit-navy); margin:0;">Vacancies</h3>
+              <button class="btn btn-primary btn-sm" onclick="navigateTo('create-vacancy')" style="padding: 3px 8px; font-size: 0.75rem;">+ List New</button>
+            </div>
             <ul style="list-style:none; line-height: 1.8; font-size: 0.85rem;">
               ${vacancies.map(v => `
                 <li style="margin-bottom: 6px;">
@@ -1188,6 +1200,9 @@ async function renderRCDashboardScreen(selectedVacancyId) {
                 <h2 class="card-title">Applications – ${currentVac.vacancyId}</h2>
                 <p class="card-subtitle">${currentVac.designation}, ${currentVac.specialization} (${currentVac.department})</p>
               </div>
+              <button class="btn btn-primary btn-sm" onclick="navigateTo('create-vacancy')">
+                ➕ List New Vacancy
+              </button>
             </div>
 
             <!-- Precondition Notice (V-10) -->
@@ -2111,6 +2126,333 @@ function openTraceabilityModal() {
     </div>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// --- S-VAC: RECRUITMENT CELL - LIST NEW VACANCY ---
+function renderCreateVacancyScreen() {
+  const container = document.getElementById('content-area');
+  const today = new Date().toISOString().split('T')[0];
+  const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  container.innerHTML = `
+    <div class="card" style="max-width: 960px; margin: 0 auto;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">List New Faculty Vacancy</h2>
+          <p class="card-subtitle">Recruitment Cell Administrative Portal — Create, Configure & Publish Faculty Opening</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="navigateTo('rc-dashboard')">← Back to Dashboard</button>
+      </div>
+
+      <!-- Quick Template Bar for Live Demonstration -->
+      <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap: 8px;">
+          <span style="font-size:0.85rem; font-weight:600; color:#2b6cb0;">⚡ Quick Demo Templates (1-Click Pre-fill):</span>
+          <div style="display:flex; gap: 8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" style="background:#fff; border:1px solid #90cdf4; color:#2b6cb0;" onclick="prefillVacancyTemplate('cse_ai')">🤖 CSE Asst. Prof (AI/ML)</button>
+            <button type="button" class="btn btn-sm" style="background:#fff; border:1px solid #90cdf4; color:#2b6cb0;" onclick="prefillVacancyTemplate('ece_iot')">⚡ ECE Assoc. Prof (5G/IoT)</button>
+            <button type="button" class="btn btn-sm" style="background:#fff; border:1px solid #90cdf4; color:#2b6cb0;" onclick="prefillVacancyTemplate('math_ds')">📊 Math Prof (Data Science)</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="create-vac-error-banner"></div>
+
+      <form id="create-vacancy-form" onsubmit="handleCreateVacancySubmit(event)">
+        <!-- Section 1: Position & Department -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 1rem; color: var(--lnmiit-navy); border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 14px;">
+            1. Position & Academic Department
+          </h3>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-dept">Department</label>
+              <select id="vac-new-dept" class="form-control" required onchange="autoUpdateVacancyId()">
+                <option value="Computer Science">Computer Science</option>
+                <option value="Electronics & Comm.">Electronics & Comm.</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="Physics">Physics</option>
+                <option value="Humanities & Social Sciences">Humanities & Social Sciences</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-desig">Designation</label>
+              <select id="vac-new-desig" class="form-control" required>
+                <option value="Assistant Professor">Assistant Professor</option>
+                <option value="Associate Professor">Associate Professor</option>
+                <option value="Professor">Professor</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-level">Academic Pay Level</label>
+              <select id="vac-new-level" class="form-control" required>
+                <option value="Level 10">Level 10 (Rs. 57,700 - 98,200)</option>
+                <option value="Level 11">Level 11 (Rs. 68,900 - 1,17,200)</option>
+                <option value="Level 12">Level 12 (Rs. 1,01,500 - 1,67,400)</option>
+                <option value="Level 13A2">Level 13A2 (Rs. 1,39,600 - 2,11,300)</option>
+                <option value="Level 14">Level 14 (Rs. 1,44,200 - 2,18,200)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-spec">Specialization / Domain</label>
+              <input type="text" id="vac-new-spec" class="form-control" placeholder="e.g. Artificial Intelligence, Cloud Systems, Robotics" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="vac-new-id">Vacancy Reference ID (Optional - Auto Generated if blank)</label>
+              <input type="text" id="vac-new-id" class="form-control" placeholder="e.g. FAC-CS-2026-02">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Window & Position Terms -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 1rem; color: var(--lnmiit-navy); border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 14px;">
+            2. Application Window & Engagement Terms
+          </h3>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-open-date">Opening Date</label>
+              <input type="date" id="vac-new-open-date" class="form-control" value="${today}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-close-date">Closing Date (Application Deadline)</label>
+              <input type="date" id="vac-new-close-date" class="form-control" value="${nextMonth}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-nature">Nature of Appointment</label>
+              <select id="vac-new-nature" class="form-control">
+                <option value="Full-time, Regular">Full-time, Regular</option>
+                <option value="Contractual (3 Years)">Contractual (3 Years)</option>
+                <option value="Visiting Faculty">Visiting Faculty</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="vac-new-location">Work Location</label>
+              <input type="text" id="vac-new-location" class="form-control" value="LNMIIT Campus, Jaipur, Rajasthan">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-status">Publication Status</label>
+              <select id="vac-new-status" class="form-control">
+                <option value="PUBLISHED">PUBLISHED (Open for Online Applications)</option>
+                <option value="DRAFT">DRAFT (Saved internally)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Eligibility & Screening Criteria -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 1rem; color: var(--lnmiit-navy); border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 14px;">
+            3. Eligibility & Automated Screening Rules
+          </h3>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-edu">Minimum Education Qualification</label>
+              <input type="text" id="vac-new-edu" class="form-control" value="PhD in relevant area" placeholder="e.g. PhD in relevant area" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required" for="vac-new-exp">Minimum Experience Required (Years)</label>
+              <input type="number" step="0.5" min="0" max="30" id="vac-new-exp" class="form-control" value="2.0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vac-new-criteria-other">Publication / Special Screening Requirements</label>
+            <input type="text" id="vac-new-criteria-other" class="form-control" placeholder="e.g. Minimum 2 SCI/SCOPUS indexed journal papers" value="Minimum 2 peer-reviewed publications in reputed conferences/journals">
+          </div>
+        </div>
+
+        <!-- Section 4: Compensation & Job Profile -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 1rem; color: var(--lnmiit-navy); border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 14px;">
+            4. Compensation, Benefits & Key Responsibilities
+          </h3>
+          <div class="form-group">
+            <label class="form-label" for="vac-new-comp">Compensation & Pay Scale Details</label>
+            <input type="text" id="vac-new-comp" class="form-control" value="Pay Level 10 (7th CPC), Basic Rs. 57,700 - 98,200 + DA + HRA">
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="vac-new-benefits">Benefits & Allowances</label>
+              <textarea id="vac-new-benefits" class="form-control" rows="2">Comprehensive medical health insurance, campus residential quarters, initial research seed grant up to 5 Lakhs.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="vac-new-incentives">Academic Incentives</label>
+              <textarea id="vac-new-incentives" class="form-control" rows="2">Cumulative Professional Development Allowance (CPDA), national & international conference travel grants.</textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vac-new-resp">Teaching & Laboratory Responsibilities</label>
+            <textarea id="vac-new-resp" class="form-control" rows="2">Teaching undergraduate & postgraduate courses, course curriculum development, laboratory session supervision, mentoring B.Tech/M.Tech capstone projects.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vac-new-notes">Special Instructions / Additional Notes</label>
+            <textarea id="vac-new-notes" class="form-control" rows="2">Candidates with demonstrable teaching excellence and sponsored R&D project experience will be given priority consideration.</textarea>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; justify-content:flex-end; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 18px;">
+          <button type="button" class="btn btn-secondary" onclick="navigateTo('rc-dashboard')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-vacancy">
+            🚀 Publish & List Vacancy
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+function autoUpdateVacancyId() {
+  const dept = document.getElementById('vac-new-dept').value;
+  const deptCodeMap = {
+    "Computer Science": "CS",
+    "Electronics & Comm.": "EC",
+    "Mechanical": "ME",
+    "Mathematics": "MA",
+    "Physics": "PH",
+    "Humanities & Social Sciences": "HSS"
+  };
+  const code = deptCodeMap[dept] || dept.slice(0, 2).toUpperCase();
+  const year = new Date().getFullYear();
+  const idInput = document.getElementById('vac-new-id');
+  if (idInput && !idInput.value) {
+    idInput.placeholder = `e.g. FAC-${code}-${year}-02`;
+  }
+}
+
+function prefillVacancyTemplate(type) {
+  if (type === 'cse_ai') {
+    document.getElementById('vac-new-dept').value = 'Computer Science';
+    document.getElementById('vac-new-desig').value = 'Assistant Professor';
+    document.getElementById('vac-new-level').value = 'Level 10';
+    document.getElementById('vac-new-spec').value = 'Artificial Intelligence, Deep Learning & NLP';
+    document.getElementById('vac-new-edu').value = 'PhD in Computer Science / Artificial Intelligence';
+    document.getElementById('vac-new-exp').value = '2.0';
+    document.getElementById('vac-new-comp').value = 'Pay Level 10 (7th CPC), Basic Rs. 57,700 - 98,200 + Allowances';
+    document.getElementById('vac-new-criteria-other').value = 'Top-tier conference publications (NeurIPS, ICML, ACL, CVPR) preferred';
+    document.getElementById('vac-new-notes').value = 'Strong programming skills in Python/PyTorch and prior teaching experience in Machine Learning preferred.';
+  } else if (type === 'ece_iot') {
+    document.getElementById('vac-new-dept').value = 'Electronics & Comm.';
+    document.getElementById('vac-new-desig').value = 'Associate Professor';
+    document.getElementById('vac-new-level').value = 'Level 13A2';
+    document.getElementById('vac-new-spec').value = 'Wireless Communications, IoT & 5G/6G Networks';
+    document.getElementById('vac-new-edu').value = 'PhD in Electronics / Telecommunications Engineering';
+    document.getElementById('vac-new-exp').value = '6.0';
+    document.getElementById('vac-new-comp').value = 'Pay Level 13A2 (7th CPC), Basic Rs. 1,39,600 + Allowances';
+    document.getElementById('vac-new-criteria-other').value = 'Minimum 5 SCI journal papers and experience with sponsored R&D projects';
+    document.getElementById('vac-new-notes').value = 'Experience in handling hardware testbeds, SDRs and industry consultancy is highly desirable.';
+  } else if (type === 'math_ds') {
+    document.getElementById('vac-new-dept').value = 'Mathematics';
+    document.getElementById('vac-new-desig').value = 'Professor';
+    document.getElementById('vac-new-level').value = 'Level 14';
+    document.getElementById('vac-new-spec').value = 'Applied Statistics, Optimization & Foundations of Data Science';
+    document.getElementById('vac-new-edu').value = 'PhD in Mathematics / Statistics';
+    document.getElementById('vac-new-exp').value = '10.0';
+    document.getElementById('vac-new-comp').value = 'Pay Level 14 (7th CPC), Basic Rs. 1,44,200 + Allowances';
+    document.getElementById('vac-new-criteria-other').value = 'Significant track record of PhD student supervision and high-impact publications';
+    document.getElementById('vac-new-notes').value = 'Leadership role in establishing advanced computational mathematics laboratory.';
+  }
+  showToast("Template loaded into form!");
+}
+
+async function handleCreateVacancySubmit(e) {
+  e.preventDefault();
+  const errorBanner = document.getElementById('create-vac-error-banner');
+  errorBanner.innerHTML = '';
+
+  const department = document.getElementById('vac-new-dept').value;
+  const designation = document.getElementById('vac-new-desig').value;
+  const academicLevel = document.getElementById('vac-new-level').value;
+  const specialization = document.getElementById('vac-new-spec').value.trim();
+  const vacancyId = document.getElementById('vac-new-id').value.trim();
+  const openingDate = document.getElementById('vac-new-open-date').value;
+  const closingDate = document.getElementById('vac-new-close-date').value;
+  const natureOfPosition = document.getElementById('vac-new-nature').value;
+  const location = document.getElementById('vac-new-location').value.trim();
+  const status = document.getElementById('vac-new-status').value;
+  const educationEligibility = document.getElementById('vac-new-edu').value.trim();
+  const minExperienceYears = parseFloat(document.getElementById('vac-new-exp').value) || 0;
+  const otherRequirements = document.getElementById('vac-new-criteria-other').value.trim();
+  const compensation = document.getElementById('vac-new-comp').value.trim();
+  const benefits = document.getElementById('vac-new-benefits').value.trim();
+  const incentives = document.getElementById('vac-new-incentives').value.trim();
+  const teachingResponsibilities = document.getElementById('vac-new-resp').value.trim();
+  const notes = document.getElementById('vac-new-notes').value.trim();
+
+  if (new Date(closingDate) <= new Date(openingDate)) {
+    errorBanner.innerHTML = `
+      <div class="alert-danger-box">
+        <strong>Invalid Dates:</strong> The closing date (${closingDate}) must be strictly after the opening date (${openingDate}).
+      </div>
+    `;
+    return;
+  }
+
+  const payload = {
+    vacancyId: vacancyId || undefined,
+    department,
+    designation,
+    academicLevel,
+    specialization,
+    openingDate,
+    closingDate,
+    natureOfPosition,
+    location,
+    status,
+    educationEligibility,
+    minExperienceYears,
+    otherRequirements,
+    compensation,
+    benefits,
+    incentives,
+    teachingResponsibilities,
+    notes
+  };
+
+  const submitBtn = document.getElementById('btn-submit-vacancy');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Publishing...';
+  }
+
+  try {
+    const res = await apiRequest('/vacancies', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    showToast(`Vacancy ${res.vacancyId} listed successfully!`);
+    navigateTo('rc-dashboard', { vacancyId: res.vacancyId });
+  } catch (err) {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '🚀 Publish & List Vacancy';
+    }
+    errorBanner.innerHTML = `
+      <div class="alert-danger-box">
+        <strong>Failed to list vacancy:</strong> ${err.message || 'Server error'}
+      </div>
+    `;
+  }
 }
 
 // Helpers

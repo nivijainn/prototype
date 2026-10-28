@@ -47,12 +47,17 @@ The prototype includes a **1-Click Persona Demo Bar** at the top of the screen t
 
 ---
 
-### Stage 2: The Recruitment Cell (Anita Verma) — UC-007: Screen Applications
+### Stage 2: The Recruitment Cell (Anita Verma) — UC-007: Screen Applications & Vacancy Management
 1. **Click `👩‍💼 Anita Verma (Recruitment Cell)`** in the top demo bar.
-2. **Screen S-07 (Recruitment Cell Dashboard)**:
+2. **List a New Vacancy (New Capability)**:
+   - Click **"➕ List New Vacancy"** in the top navigation bar or from the Dashboard sidebar.
+   - Use the **1-Click Demo Pre-fill Templates** (e.g., `🤖 CSE Asst. Prof (AI/ML)`) or customize your own department, designation, pay level, eligibility criteria, and application window.
+   - Click **"🚀 Publish & List Vacancy"**.
+   - The vacancy is immediately created with an immutable audit log (`VACANCY_CREATED`), broadcast notification, and shows up instantly in the **Browse Openings** catalog and Recruitment Cell Dashboard.
+3. **Screen S-07 (Recruitment Cell Dashboard)**:
    - Notice the left sidebar showing summary counters: Total, Submitted, Eligible, Not eligible, Requires review.
    - Shows the precondition enforcement: Screening is enabled only when the application window is closed (UC-007 precondition, Error V-10).
-3. **Screen S-08 (Screen Application)**:
+4. **Screen S-08 (Screen Application)**:
    - Click **"Screen"** or **"View / Re-screen"** on Rahul Sharma (`APP-0158`).
    - Point out the **Side-by-side design**:
      - Left: Applicant degree, experience, and uploaded document verification checkboxes (`Verified` vs `Issue`).

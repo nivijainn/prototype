@@ -58,6 +58,97 @@ class Store {
     return now <= close;
   }
 
+  // --- List / Create Vacancy (Recruitment Cell) ---
+  createVacancy(data, userId = "U007") {
+    // Validate mandatory fields
+    const required = ['department', 'designation', 'specialization', 'closingDate'];
+    for (const f of required) {
+      if (!data[f] || !String(data[f]).trim()) {
+        const err = new Error(`Field '${f}' is mandatory to list a vacancy.`);
+        err.status = 400; err.code = "VALIDATION_FAILED";
+        throw err;
+      }
+    }
+
+    const openingDate = data.openingDate || new Date().toISOString().split('T')[0];
+    const closingDate = data.closingDate;
+
+    if (new Date(closingDate) <= new Date(openingDate)) {
+      const err = new Error("Application closing date must be after the opening date.");
+      err.status = 400; err.code = "INVALID_DATES";
+      throw err;
+    }
+
+    // Auto-generate Vacancy ID if not explicitly provided
+    let vacancyId = data.vacancyId;
+    if (!vacancyId || !String(vacancyId).trim()) {
+      const deptCodeMap = {
+        "Computer Science": "CS",
+        "Electronics & Comm.": "EC",
+        "Mechanical": "ME",
+        "Mathematics": "MA",
+        "Physics": "PH",
+        "Humanities & Social Sciences": "HSS",
+        "Humanities": "HSS"
+      };
+      const deptKey = data.department.trim();
+      const deptCode = deptCodeMap[deptKey] || deptKey.slice(0, 2).toUpperCase();
+      const currentYear = new Date().getFullYear();
+      const existingCount = this.data.vacancies.filter(v => v.department.toLowerCase() === deptKey.toLowerCase()).length;
+      const seq = String(existingCount + 1).padStart(2, '0');
+      vacancyId = `FAC-${deptCode}-${currentYear}-${seq}`;
+    } else {
+      vacancyId = String(vacancyId).trim();
+    }
+
+    // Verify vacancyId uniqueness
+    if (this.data.vacancies.some(v => v.vacancyId.toLowerCase() === vacancyId.toLowerCase())) {
+      const err = new Error(`Vacancy with ID '${vacancyId}' already exists.`);
+      err.status = 409; err.code = "DUPLICATE_VACANCY";
+      throw err;
+    }
+
+    const criteriaId = `ELIG-${vacancyId.replace(/^FAC-/, '')}`;
+
+    const newVacancy = {
+      vacancyId: vacancyId,
+      department: data.department.trim(),
+      specialization: data.specialization.trim(),
+      designation: data.designation.trim(),
+      academicLevel: data.academicLevel || "Level 10",
+      notes: data.notes || "Applications invited from qualified candidates.",
+      educationEligibility: data.educationEligibility || data.educationRequirement || "PhD in relevant discipline",
+      experienceEligibility: data.experienceEligibility || `${data.minExperienceYears || 0}+ years teaching / research`,
+      compensation: data.compensation || `Pay ${data.academicLevel || 'Level 10'} (7th CPC) + DA + HRA + Institute Allowances`,
+      benefits: data.benefits || "Campus residential quarters, Medical insurance, Research Seed Grant",
+      incentives: data.incentives || "Conference travel grants, Cumulative Professional Development Allowance (CPDA)",
+      natureOfPosition: data.natureOfPosition || "Full-time, Regular",
+      location: data.location || "LNMIIT Campus, Jaipur",
+      teachingResponsibilities: data.teachingResponsibilities || "UG/PG core and elective lectures, laboratory supervision",
+      openingDate: openingDate,
+      closingDate: closingDate,
+      status: data.status || "PUBLISHED",
+      criteria: {
+        criteriaId: criteriaId,
+        vacancyId: vacancyId,
+        educationRequirement: data.educationRequirement || data.educationEligibility || "PhD",
+        minExperienceYears: parseFloat(data.minExperienceYears) || 0,
+        otherRequirements: data.otherRequirements || "As per institute norms"
+      }
+    };
+
+    // Prepend to top of vacancies list
+    this.data.vacancies.unshift(newVacancy);
+
+    // Immutable audit trail (NFR-007)
+    this.recordAuditLog(userId, "VACANCY_CREATED", "Vacancy", newVacancy.vacancyId);
+
+    // Broadcast notification
+    this.createNotification("ALL", "VACANCY_ANNOUNCED", `New Vacancy Listed: ${newVacancy.designation} in ${newVacancy.department} (${newVacancy.specialization}).`);
+
+    return newVacancy;
+  }
+
   // --- Applications (S-04, S-05, S-06, CS-1a, CS-1) ---
   getApplicationsByApplicant(applicantId) {
     return this.data.applications.filter(a => a.applicantId === applicantId);
